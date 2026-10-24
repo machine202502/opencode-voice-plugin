@@ -3,13 +3,15 @@ param(
   [Parameter(Mandatory = $true)][int]$Modifiers,
   [Parameter(Mandatory = $true)][int]$VirtualKey,
   [string]$Token = "",
-  [switch]$Paste
+  [switch]$Paste,
+  [switch]$OnlyOpenCode
 )
 
 $ErrorActionPreference = "Stop"
 
 Add-Type @"
 using System;
+using System.Text;
 using System.Runtime.InteropServices;
 
 public static class VoiceHotkey {
@@ -24,6 +26,34 @@ public static class VoiceHotkey {
 
   [DllImport("user32.dll")]
   public static extern IntPtr GetForegroundWindow();
+
+  [DllImport("user32.dll")]
+  public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+  public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+
+  [DllImport("user32.dll")]
+  public static extern int GetWindowTextLength(IntPtr hWnd);
+
+  public static bool IsOpenCode(IntPtr hWnd) {
+    if (hWnd == IntPtr.Zero) return false;
+
+    uint pid;
+    GetWindowThreadProcessId(hWnd, out pid);
+    try {
+      var process = System.Diagnostics.Process.GetProcessById((int)pid);
+      if (string.Equals(process.ProcessName, "OpenCode", StringComparison.OrdinalIgnoreCase)) return true;
+    } catch {
+      // The process may have exited; fall back to the window title.
+    }
+
+    int length = GetWindowTextLength(hWnd);
+    if (length <= 0) return false;
+    var title = new StringBuilder(length + 1);
+    GetWindowText(hWnd, title, title.Capacity);
+    return title.ToString().IndexOf("OpenCode", StringComparison.OrdinalIgnoreCase) >= 0;
+  }
 
   [StructLayout(LayoutKind.Sequential)]
   public struct MSG {
@@ -59,10 +89,15 @@ try {
     if ($msg.message -ne [VoiceHotkey]::WM_HOTKEY) { continue }
     if ($msg.wParam -ne [IntPtr]$id) { continue }
 
+    # By default react only when OpenCode (desktop window or its web UI tab)
+    # is in front. Pressing the combination in a browser must do nothing.
+    $foreground = [VoiceHotkey]::GetForegroundWindow()
+    if ($OnlyOpenCode -and -not [VoiceHotkey]::IsOpenCode($foreground)) { continue }
+
     # Remember the focused window and hand the HTTP request to a short-lived
-    # worker. The listener stays responsive, so a second press can cancel a
-    # recording that is still running.
-    $target = [VoiceHotkey]::GetForegroundWindow().ToInt64()
+    # worker. The listener stays responsive, so a second press can stop a
+    # recording that is still running and transcribe it.
+    $target = $foreground.ToInt64()
     $arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$worker`" -Url `"$Url`" -Target $target"
     if ($Token) { $arguments += " -Token `"$Token`"" }
     if ($Paste) { $arguments += " -Paste" }

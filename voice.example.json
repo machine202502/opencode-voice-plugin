@@ -4,6 +4,7 @@
   "hotkey": "<leader>v",
   "globalHotkey": "",
   "globalHotkeyPaste": true,
+  "globalHotkeyOnlyOpenCode": true,
   "insert": {
     "autoSubmit": false,
     "trailingSpace": true

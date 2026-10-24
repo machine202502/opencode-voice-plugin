@@ -31,9 +31,15 @@ test("normalizeConfig clamps and fills defaults", () => {
 });
 
 test("global hotkey settings are normalized", () => {
-  const config = normalizeConfig({ globalHotkey: " Ctrl+Alt+D ", globalHotkeyPaste: false });
+  const config = normalizeConfig({
+    globalHotkey: " Ctrl+Alt+D ",
+    globalHotkeyPaste: false,
+    globalHotkeyOnlyOpenCode: false,
+  });
   assert.equal(config.globalHotkey, "ctrl+alt+d");
   assert.equal(config.globalHotkeyPaste, false);
+  assert.equal(config.globalHotkeyOnlyOpenCode, false);
+  assert.equal(normalizeConfig({}).globalHotkeyOnlyOpenCode, true);
 });
 
 test("env overrides win over file values", () => {

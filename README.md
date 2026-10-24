@@ -120,7 +120,7 @@ JSONC поддерживается: комментарии `//`, `/* */` и ви
 | Перечитать `voice.json` | TUI | `/voice-reload` |
 | Прогреть движок вручную | TUI | `/voice-warmup` |
 
-`Ctrl+Alt+D` — глобальная горячая клавиша: работает, когда окно OpenCode в фокусе (и вообще в любом приложении). После распознавания текст копируется в буфер и, если фокус не менялся, автоматически вставляется через Ctrl+V в то же окно. Если вы переключились на другое окно, вставка не выполняется — текст останется в буфере. Повторное нажатие во время записи отменяет её. Отключается пустым `globalHotkey`.
+`Ctrl+Alt+D` — горячая клавиша для desktop. По умолчанию она срабатывает **только когда в фокусе OpenCode** (окно приложения или его вкладка в браузере); в другом приложении или на посторонней вкладке нажатие игнорируется. После распознавания текст копируется в буфер и, если фокус не менялся, автоматически вставляется через Ctrl+V в то же окно. Если вы переключились на другое окно, вставка не выполняется — текст останется в буфере. Повторное нажатие во время записи **останавливает её и распознаёт текст**, а не выбрасывает. Отключается пустым `globalHotkey`.
 
 Для глобальной клавиши можно задать отдельную паузу автостопа — удобно для длинной диктовки:
 
@@ -131,7 +131,7 @@ JSONC поддерживается: комментарии `//`, `/* */` и ви
 }
 ```
 
-Здесь обычные `/voice` и TUI останавливаются через 1,4 с тишины, а запись по `Ctrl+Alt+D` — через 60 с. Значение `0` означает «использовать `oneShotSilenceMs`».
+Здесь обычные `/voice` и TUI останавливаются через 1,4 с тишины, а запись по `Ctrl+Alt+D` — через 60 с. Значение `0` означает «использовать `oneShotSilenceMs`». Второе нажатие Ctrl+Alt+D останавливает запись раньше, распознаёт и копирует текст — ждать 60 с не обязательно.
 
 
 Запись останавливается сама после `audio.oneShotSilenceMs` тишины (по умолчанию 1400 мс), но только если речь уже была. Страховочный таймаут — `audio.autoStopSilenceMs` (60 с).
@@ -158,6 +158,7 @@ JSONC поддерживается: комментарии `//`, `/* */` и ви
 | `hotkey` | `<leader>v` | Клавиша записи в TUI |
 | `globalHotkey` | `""` | Глобальная клавиша для desktop (Windows), например `ctrl+alt+d` |
 | `globalHotkeyPaste` | `true` | Вставлять текст через Ctrl+V в активное окно после глобальной записи |
+| `globalHotkeyOnlyOpenCode` | `true` | Реагировать на клавишу только когда в фокусе OpenCode; `false` — глобально |
 | `insert.autoSubmit` | `false` | Отправлять текст сразу после распознавания |
 | `insert.trailingSpace` | `true` | Добавлять пробел в конце |
 
@@ -263,7 +264,7 @@ ffmpeg -hide_banner -list_devices true -f dshow -i dummy
 
 Перекрывают файл:
 
-`OPENCODE_VOICE_PROVIDER`, `OPENCODE_VOICE_LANGUAGE`, `OPENCODE_VOICE_HOTKEY`, `OPENCODE_VOICE_GLOBAL_HOTKEY`, `OPENCODE_VOICE_GLOBAL_HOTKEY_PASTE`, `OPENCODE_VOICE_CONFIG`, `OPENCODE_VOICE_LOG`,
+`OPENCODE_VOICE_PROVIDER`, `OPENCODE_VOICE_LANGUAGE`, `OPENCODE_VOICE_HOTKEY`, `OPENCODE_VOICE_GLOBAL_HOTKEY`, `OPENCODE_VOICE_GLOBAL_HOTKEY_PASTE`, `OPENCODE_VOICE_GLOBAL_HOTKEY_ONLY_OPENCODE`, `OPENCODE_VOICE_CONFIG`, `OPENCODE_VOICE_LOG`,
 `OPENCODE_VOICE_FFMPEG`, `OPENCODE_VOICE_INPUT_FORMAT`, `OPENCODE_VOICE_DEVICE`, `OPENCODE_VOICE_SILENCE_MS`,
 `OPENCODE_VOICE_ONE_SHOT_SILENCE_MS`, `OPENCODE_VOICE_HOTKEY_ONE_SHOT_SILENCE_MS`, `OPENCODE_VOICE_AUTO_STOP_SILENCE_MS`,
 `OPENCODE_VOICE_ONNX_MODEL`, `OPENCODE_VOICE_ONNX_EXE`, `OPENCODE_VOICE_ONNX_MODE`, `OPENCODE_VOICE_ONNX_PRECISION`, `OPENCODE_VOICE_ONNX_EXTRA_ARGS`,
@@ -283,7 +284,7 @@ ffmpeg -hide_banner -list_devices true -f dshow -i dummy
 |---|---|---|
 | `GET` | `/health` | Статус, провайдер, устройство, лимиты. Доступен без токена |
 | `POST` | `/transcribe` | Multipart (`audio`) или сырое тело; возвращает `{ ok, text, duration_ms }` |
-| `POST` | `/hotkey` | Глобальная клавиша: записать фразу, скопировать в буфер; повторный вызов во время записи отменяет её |
+| `POST` | `/hotkey` | Глобальная клавиша: записать фразу, скопировать в буфер; повторный вызов во время записи останавливает её и распознаёт текст |
 | `POST` | `/record/start` | Начать запись с микрофона машины (`?oneShot=1`) |
 | `POST` | `/record/stop` | Остановить и распознать |
 | `GET` | `/record/status` | Идёт ли запись |
@@ -362,6 +363,8 @@ CORS: разрешены `localhost`, `127.0.0.1`, `[::1]`, `chrome-extension://
 | В TUI текст не вставился | В OpenCode 2 текст копируется в буфер — нажмите Ctrl+V; либо используйте `/voice-send` |
 | Горячая клавиша не срабатывает | Смените `hotkey` в `/voice-settings`; проверьте конфликт с другими плагинами |
 | `Ctrl+Alt+D` не срабатывает | Комбинацию мог занять другой процесс — проверьте лог, задайте другую в `globalHotkey` и перезапустите OpenCode |
+| `Ctrl+Alt+D` не реагирует в браузере | Так и задумано: `globalHotkeyOnlyOpenCode` ограничивает клавишу окном OpenCode. Поставьте `false`, чтобы она работала везде |
+| После остановки хоткея буфер пуст | Второе нажатие теперь не отменяет запись, а останавливает и распознаёт её. Если текста нет, проверьте `/voice-doctor` и уровень микрофона |
 | Глобальная клавиша вставила текст не туда | Плагин вставляет только если фокус не менялся; иначе текст остаётся в буфере. Отключите `globalHotkeyPaste` |
 
 Лог: `~/.local/share/opencode/voice/voice.log` (на Windows — `C:\Users\<вы>\.local\share\opencode\voice\voice.log`).

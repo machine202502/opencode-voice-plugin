@@ -49,6 +49,7 @@ async function startVoiceServer({ directory, logger }) {
       url: server.url,
       token: config.server.token,
       paste: config.globalHotkeyPaste,
+      onlyOpenCode: config.globalHotkeyOnlyOpenCode,
       logger,
     });
   }

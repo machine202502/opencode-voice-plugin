@@ -39,7 +39,9 @@ if ($Token) { $headers["X-Voice-Token"] = $Token }
 
 try {
   $response = Invoke-RestMethod -Method Post -Uri "$Url/hotkey" -Headers $headers -TimeoutSec 180
-  if ($Paste -and $response.ok -and $Target -ne 0) {
+  # Only the request that actually produced a transcript pastes. The stop
+  # request returns `stopping` without text.
+  if ($Paste -and $response.ok -and $response.text -and $Target -ne 0) {
     # Only paste if the user is still in the window they pressed the hotkey in.
     if ([VoiceWorker]::GetForegroundWindow().ToInt64() -eq $Target) {
       [void][VoiceWorker]::SetForegroundWindow([IntPtr]$Target)
