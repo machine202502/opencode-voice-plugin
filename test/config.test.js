@@ -18,12 +18,13 @@ test("parseJsonc removes comments and trailing commas but preserves strings", ()
 test("normalizeConfig clamps and fills defaults", () => {
   const config = normalizeConfig({
     provider: "nonsense",
-    audio: { silenceMs: 1, oneShotSilenceMs: 999999, cues: { volume: 900 } },
+    audio: { silenceMs: 1, oneShotSilenceMs: 999999, hotkeyOneShotSilenceMs: 9999999, cues: { volume: 900 } },
     server: { port: 99999, concurrency: 99 },
   });
   assert.equal(config.provider, "auto");
   assert.equal(config.audio.silenceMs, 150);
   assert.equal(config.audio.oneShotSilenceMs, 60000);
+  assert.equal(config.audio.hotkeyOneShotSilenceMs, 600000);
   assert.equal(config.audio.cues.volume, 100);
   assert.equal(config.server.port, 65535);
   assert.equal(config.server.concurrency, 8);

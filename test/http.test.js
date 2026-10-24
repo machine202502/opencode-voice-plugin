@@ -94,6 +94,24 @@ test("HTTP /hotkey records one phrase and copies it without a session", async ()
   }
 });
 
+test("HTTP /hotkey cancels an active recording on a second press", async () => {
+  const source = new FakePcmSource();
+  const context = await startServer({}, { source, copy: async () => true });
+  try {
+    const first = fetch(`${context.url}/hotkey`, { method: "POST" });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const second = await fetch(`${context.url}/hotkey`, { method: "POST" });
+    assert.equal(second.status, 200);
+    assert.equal((await second.json()).cancelled, true);
+
+    const firstResponse = await first;
+    const firstBody = await firstResponse.json();
+    assert.equal(firstBody.cancelled, true);
+  } finally {
+    await close(context);
+  }
+});
+
 test("HTTP /record/start and /record/stop capture through the runtime", async () => {
   const source = new FakePcmSource();
   const context = await startServer({}, { source });

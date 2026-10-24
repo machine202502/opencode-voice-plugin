@@ -22,7 +22,8 @@
     "maxSegmentMs": 15000,
     "noiseThreshold": 0,
     "autoStopSilenceMs": 60000,
-    "oneShotSilenceMs": 1400
+    "oneShotSilenceMs": 1400,
+    "hotkeyOneShotSilenceMs": 0
   },
   "onnx": {
     "modelPath": "",

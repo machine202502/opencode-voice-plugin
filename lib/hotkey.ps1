@@ -23,16 +23,7 @@ public static class VoiceHotkey {
   public static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
 
   [DllImport("user32.dll")]
-  public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
-
-  [DllImport("user32.dll")]
   public static extern IntPtr GetForegroundWindow();
-
-  [DllImport("user32.dll")]
-  public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-  [DllImport("user32.dll")]
-  public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
   [StructLayout(LayoutKind.Sequential)]
   public struct MSG {
@@ -46,26 +37,6 @@ public static class VoiceHotkey {
   }
 
   public const uint WM_HOTKEY = 0x0312;
-  public const uint PM_REMOVE = 0x0001;
-  public const byte VK_CONTROL = 0x11;
-  public const byte VK_V = 0x56;
-  public const uint KEYEVENTF_KEYUP = 0x0002;
-
-  public static int DrainHotkeys() {
-    int count = 0;
-    MSG message;
-    while (PeekMessage(out message, IntPtr.Zero, 0, 0, PM_REMOVE)) {
-      if (message.message == WM_HOTKEY) count++;
-    }
-    return count;
-  }
-
-  public static void Paste() {
-    keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
-    keybd_event(VK_V, 0, 0, UIntPtr.Zero);
-    keybd_event(VK_V, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-    keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-  }
 }
 "@
 
@@ -77,6 +48,9 @@ if (-not [VoiceHotkey]::RegisterHotKey([IntPtr]::Zero, $id, [uint32]$Modifiers, 
 
 Write-Output "registered"
 
+$worker = Join-Path $PSScriptRoot "hotkey-worker.ps1"
+$powerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+
 try {
   while ($true) {
     $msg = New-Object VoiceHotkey+MSG
@@ -85,27 +59,19 @@ try {
     if ($msg.message -ne [VoiceHotkey]::WM_HOTKEY) { continue }
     if ($msg.wParam -ne [IntPtr]$id) { continue }
 
-    # Remember which window was focused when the hotkey was pressed. Only paste
-    # back if the user is still there, so the transcript cannot land in a window
-    # they switched to while speaking.
-    $target = [VoiceHotkey]::GetForegroundWindow()
-    try {
-      $headers = @{}
-      if ($Token) { $headers["X-Voice-Token"] = $Token }
-      $response = Invoke-RestMethod -Method Post -Uri "$Url/hotkey" -Headers $headers -TimeoutSec 180
-      if ($Paste -and $response.ok -and [VoiceHotkey]::GetForegroundWindow() -eq $target) {
-        [void][VoiceHotkey]::SetForegroundWindow($target)
-        Start-Sleep -Milliseconds 80
-        [VoiceHotkey]::Paste()
-      }
-    } catch {
-      # A failed request must not kill the hotkey listener.
-    }
+    # Remember the focused window and hand the HTTP request to a short-lived
+    # worker. The listener stays responsive, so a second press can cancel a
+    # recording that is still running.
+    $target = [VoiceHotkey]::GetForegroundWindow().ToInt64()
+    $arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$worker`" -Url `"$Url`" -Target $target"
+    if ($Token) { $arguments += " -Token `"$Token`"" }
+    if ($Paste) { $arguments += " -Paste" }
 
-    # While the HTTP request was running, a held or repeatedly pressed key can
-    # queue more WM_HOTKEY messages. Discard them instead of starting a chain of
-    # recordings; the user has to press the combination again.
-    [void][VoiceHotkey]::DrainHotkeys()
+    try {
+      Start-Process -FilePath $powerShell -ArgumentList $arguments -WindowStyle Hidden | Out-Null
+    } catch {
+      # A failed spawn must not kill the listener.
+    }
   }
 } finally {
   [void][VoiceHotkey]::UnregisterHotKey([IntPtr]::Zero, $id)

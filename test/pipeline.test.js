@@ -54,6 +54,30 @@ test("VoiceSession one-shot stops after silence and returns the transcript", asy
   assert.equal(transcriber.calls, 1);
 });
 
+test("VoiceSession accepts a per-session one-shot silence override", async () => {
+  const source = new FakePcmSource();
+  const transcriber = new FakeTranscriber(["ок"]);
+  const config = testConfig({
+    audio: { cues: { start: false, end: false, volume: 0 }, oneShotSilenceMs: 5000 },
+  });
+  const session = new VoiceSession(config, {}, testLogger(), {
+    oneShot: true,
+    oneShotSilenceMs: 200,
+    source,
+    transcriber,
+  });
+
+  await session.start();
+  source.pushTone(400);
+  source.pushSilence(500);
+  const info = await Promise.race([
+    session.done,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("override was ignored")), 3000)),
+  ]);
+  assert.equal(info.transcript, "ок");
+  assert.equal(info.reason, "one-shot");
+});
+
 test("VoiceSession cancel clears the transcript", async () => {
   const source = new FakePcmSource();
   const transcriber = new FakeTranscriber(["nope"]);

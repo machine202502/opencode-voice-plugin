@@ -120,7 +120,18 @@ JSONC поддерживается: комментарии `//`, `/* */` и ви
 | Перечитать `voice.json` | TUI | `/voice-reload` |
 | Прогреть движок вручную | TUI | `/voice-warmup` |
 
-`Ctrl+Alt+D` — глобальная горячая клавиша: работает, когда окно OpenCode в фокусе (и вообще в любом приложении). После распознавания текст копируется в буфер и, если фокус не менялся, автоматически вставляется через Ctrl+V в то же окно. Если вы переключились на другое окно, вставка не выполняется — текст останется в буфере. Отключается пустым `globalHotkey`.
+`Ctrl+Alt+D` — глобальная горячая клавиша: работает, когда окно OpenCode в фокусе (и вообще в любом приложении). После распознавания текст копируется в буфер и, если фокус не менялся, автоматически вставляется через Ctrl+V в то же окно. Если вы переключились на другое окно, вставка не выполняется — текст останется в буфере. Повторное нажатие во время записи отменяет её. Отключается пустым `globalHotkey`.
+
+Для глобальной клавиши можно задать отдельную паузу автостопа — удобно для длинной диктовки:
+
+```json
+"audio": {
+  "oneShotSilenceMs": 1400,
+  "hotkeyOneShotSilenceMs": 60000
+}
+```
+
+Здесь обычные `/voice` и TUI останавливаются через 1,4 с тишины, а запись по `Ctrl+Alt+D` — через 60 с. Значение `0` означает «использовать `oneShotSilenceMs`».
 
 
 Запись останавливается сама после `audio.oneShotSilenceMs` тишины (по умолчанию 1400 мс), но только если речь уже была. Страховочный таймаут — `audio.autoStopSilenceMs` (60 с).
@@ -165,6 +176,7 @@ JSONC поддерживается: комментарии `//`, `/* */` и ви
 | `noiseThreshold` | `0` | `0` = адаптивный порог; `0.01` ≈ −40 dBFS |
 | `autoStopSilenceMs` | `60000` | Страховочная остановка, `0` отключает |
 | `oneShotSilenceMs` | `1400` | Автостоп после речи в режиме одной фразы |
+| `hotkeyOneShotSilenceMs` | `0` | Отдельный автостоп для глобальной клавиши, мс; `0` = как `oneShotSilenceMs` |
 
 Узнать имена микрофонов:
 
@@ -253,7 +265,7 @@ ffmpeg -hide_banner -list_devices true -f dshow -i dummy
 
 `OPENCODE_VOICE_PROVIDER`, `OPENCODE_VOICE_LANGUAGE`, `OPENCODE_VOICE_HOTKEY`, `OPENCODE_VOICE_GLOBAL_HOTKEY`, `OPENCODE_VOICE_GLOBAL_HOTKEY_PASTE`, `OPENCODE_VOICE_CONFIG`, `OPENCODE_VOICE_LOG`,
 `OPENCODE_VOICE_FFMPEG`, `OPENCODE_VOICE_INPUT_FORMAT`, `OPENCODE_VOICE_DEVICE`, `OPENCODE_VOICE_SILENCE_MS`,
-`OPENCODE_VOICE_ONE_SHOT_SILENCE_MS`, `OPENCODE_VOICE_AUTO_STOP_SILENCE_MS`,
+`OPENCODE_VOICE_ONE_SHOT_SILENCE_MS`, `OPENCODE_VOICE_HOTKEY_ONE_SHOT_SILENCE_MS`, `OPENCODE_VOICE_AUTO_STOP_SILENCE_MS`,
 `OPENCODE_VOICE_ONNX_MODEL`, `OPENCODE_VOICE_ONNX_EXE`, `OPENCODE_VOICE_ONNX_MODE`, `OPENCODE_VOICE_ONNX_PRECISION`, `OPENCODE_VOICE_ONNX_EXTRA_ARGS`,
 `OPENCODE_VOICE_WHISPER_MODEL`, `OPENCODE_VOICE_WHISPER_EXE`, `OPENCODE_VOICE_WHISPER_ARGS`,
 `OPENCODE_VOICE_OPENAI_BASE_URL`, `OPENCODE_VOICE_OPENAI_MODEL`, `OPENAI_API_KEY`, `OPENCODE_VOICE_OPENAI_PROMPT`,
