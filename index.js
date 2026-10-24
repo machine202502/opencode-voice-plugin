@@ -87,6 +87,13 @@ async function note(ctx, sessionID, text) {
   return true;
 }
 
+/** Feedback for `/voice`: never echo the transcript into the chat on success. */
+export function copyMessage(text, copied) {
+  return copied
+    ? `📋 Распознано ${text.length} симв. и скопировано в буфер — вставьте Ctrl+V в поле ввода.`
+    : `⚠️ Не удалось скопировать текст в буфер. Распознано:\n\n${text}`;
+}
+
 export function commandList(ctx, runtime, logger) {
   const plugin = "opencode.voice";
 
@@ -101,9 +108,11 @@ export function commandList(ctx, runtime, logger) {
       }
 
       const copied = await copyToClipboard(text).catch(() => false);
-      const shown = await note(ctx, sessionID, copied ? `${text}\n\n📋 Скопировано в буфер — вставьте Ctrl+V.` : text).catch(
-        () => false,
-      );
+      // Do not inject the transcript itself into the conversation: `/voice` is
+      // dictation into the prompt, so the text belongs on the clipboard. Only
+      // fall back to showing it when copying failed and it would be lost.
+      const message = copyMessage(text, copied);
+      const shown = await note(ctx, sessionID, message).catch(() => false);
       if (!shown && !copied) logger.warn("voice transcript was neither shown nor copied", { chars: text.length });
     },
   });

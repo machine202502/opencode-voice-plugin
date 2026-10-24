@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { commandList } from "../index.js";
+import { commandList, copyMessage } from "../index.js";
 import { DEFAULTS, normalizeConfig } from "../lib/config.js";
 
 function fakeContext() {
@@ -47,6 +47,16 @@ test("server commands expose voice, voice-submit, voice-send and settings", () =
     assert.equal(typeof command.execute, "function", `${command.name} has no execute`);
     assert.equal(command.id, `opencode.voice.${command.name}`);
   }
+});
+
+test("/voice feedback keeps the transcript out of the chat when copying works", () => {
+  const success = copyMessage("секретный текст", true);
+  assert.match(success, /скопировано в буфер/);
+  assert.doesNotMatch(success, /секретный текст/);
+
+  const failure = copyMessage("секретный текст", false);
+  assert.match(failure, /Не удалось скопировать/);
+  assert.match(failure, /секретный текст/);
 });
 
 test("/voice-submit records and sends the transcript", async () => {
