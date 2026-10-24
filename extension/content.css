@@ -1,0 +1,88 @@
+#opencode-voice-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.1s, background 0.2s;
+  border-radius: 6px;
+  margin: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: inherit;
+  font-family: inherit;
+  flex: none;
+}
+
+#opencode-voice-btn:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+#opencode-voice-btn:active {
+  transform: scale(0.92);
+}
+
+#opencode-voice-btn.recording {
+  background: var(--v2-accent, #dc2626) !important;
+  color: white !important;
+  border-color: var(--v2-accent, #dc2626) !important;
+  opacity: 1;
+  animation: pulse 1s infinite;
+}
+
+#opencode-voice-btn.processing {
+  background: var(--v2-warning, #f59e0b) !important;
+  color: white !important;
+  border-color: var(--v2-warning, #f59e0b) !important;
+  opacity: 1;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.opencode-voice-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 10000;
+  animation: slideIn 0.3s ease;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.opencode-voice-toast.info {
+  background: var(--v2-background-element, #fff);
+  border: 1px solid var(--v2-border-default, #ddd);
+  color: var(--v2-text, #000);
+}
+
+.opencode-voice-toast.success {
+  background: var(--v2-success, #10b981);
+  color: white;
+}
+
+.opencode-voice-toast.error {
+  background: var(--v2-error, #ef4444);
+  color: white;
+}
+
+.opencode-voice-toast.warning {
+  background: var(--v2-warning, #f59e0b);
+  color: white;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}

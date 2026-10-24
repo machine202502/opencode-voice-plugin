@@ -1,0 +1,40 @@
+{
+  "name": "opencode-voice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local voice input for OpenCode: ffmpeg mic capture, local Whisper / GigaAM (sherpa-onnx) / OpenAI-compatible STT, TUI prompt insertion and a Chrome microphone button for the web UI",
+  "type": "module",
+  "license": "MIT",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./tui": "./tui.js",
+    "./runtime": "./lib/runtime.js",
+    "./config": "./lib/config.js"
+  },
+  "files": [
+    "index.js",
+    "tui.js",
+    "lib/",
+    "extension/",
+    "voice.example.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check index.js && node --check tui.js && node --check lib/runtime.js"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "voice",
+    "dictation",
+    "whisper",
+    "gigaam",
+    "sherpa-onnx",
+    "speech-to-text"
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "provider": "auto",
+  "language": "auto",
+  "hotkey": "<leader>v",
+  "insert": {
+    "autoSubmit": false,
+    "trailingSpace": true
+  },
+  "audio": {
+    "ffmpegPath": "ffmpeg",
+    "inputFormat": "auto",
+    "device": "",
+    "cues": {
+      "start": true,
+      "end": true,
+      "volume": 15
+    },
+    "silenceMs": 600,
+    "minSegmentMs": 400,
+    "maxSegmentMs": 15000,
+    "noiseThreshold": 0,
+    "autoStopSilenceMs": 60000,
+    "oneShotSilenceMs": 1400
+  },
+  "onnx": {
+    "modelPath": "",
+    "executablePath": "",
+    "precision": "auto",
+    "mode": "auto",
+    "threads": 2,
+    "extraArgs": ""
+  },
+  "local": {
+    "modelPath": "",
+    "executablePath": "",
+    "extraArgs": ""
+  },
+  "openai": {
+    "baseUrl": "http://127.0.0.1:8000/v1",
+    "model": "whisper-1",
+    "apiKey": "",
+    "prompt": "",
+    "sendContextPrompt": true,
+    "requestTimeoutMs": 60000
+  },
+  "salute": {
+    "tokenUrl": "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+    "recognizeUrl": "https://smartspeech.sber.ru/rest/v1/speech:recognize",
+    "scope": "SALUTE_SPEECH_PERS",
+    "clientId": "",
+    "clientSecret": "",
+    "authorizationKey": "",
+    "insecureTLS": false
+  },
+  "command": {
+    "capture": "",
+    "transcribe": ""
+  },
+  "server": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8765,
+    "token": "",
+    "maxUploadMb": 25,
+    "maxAudioSeconds": 300,
+    "concurrency": 1,
+    "allowedOrigins": [],
+    "warmup": true
+  },
+  "ui": {
+    "language": "auto"
+  }
+}

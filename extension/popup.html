@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenCode Voice</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --panel: #f6f7f9;
+      --text: #1f2328;
+      --muted: #6b7280;
+      --border: #d8dce2;
+      --accent: #2563eb;
+      --ok: #16a34a;
+      --warn: #d97706;
+      --err: #dc2626;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16181d;
+        --panel: #1e2128;
+        --text: #e6e8eb;
+        --muted: #9aa3af;
+        --border: #333842;
+        --accent: #60a5fa;
+        --ok: #4ade80;
+        --warn: #fbbf24;
+        --err: #f87171;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 340px;
+      background: var(--bg);
+      color: var(--text);
+      font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    header .logo { font-size: 18px; }
+    header .title { font-weight: 650; flex: 1; }
+    header select {
+      font: inherit;
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+    main { padding: 12px 14px; display: grid; gap: 12px; }
+    .status {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      margin-top: 5px; background: var(--muted); flex: none;
+    }
+    .dot.ok { background: var(--ok); }
+    .dot.err { background: var(--err); }
+    .dot.warn { background: var(--warn); }
+    .status strong { display: block; font-size: 12px; }
+    .status small { color: var(--muted); word-break: break-word; }
+    .field { display: grid; gap: 4px; }
+    .field label { font-size: 12px; color: var(--muted); }
+    .row { display: flex; gap: 8px; align-items: center; }
+    input[type="number"], input[type="password"], input[type="text"], select {
+      width: 100%;
+      padding: 7px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+    }
+    input[type="number"] { width: 96px; }
+    button {
+      font: inherit;
+      padding: 7px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+    }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+    button:disabled { opacity: .55; cursor: default; }
+    .checks { display: grid; gap: 6px; }
+    .check { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+    .check input { accent-color: var(--accent); }
+    .hint { color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .sep { height: 1px; background: var(--border); margin: 2px 0; }
+    .footer { display: flex; gap: 8px; }
+    .footer button { flex: 1; }
+    #message { min-height: 16px; font-size: 12px; color: var(--muted); }
+    #message.error { color: var(--err); }
+    #message.ok { color: var(--ok); }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">🎤</span>
+    <span class="title">OpenCode Voice</span>
+    <select id="uiLang" title="Language">
+      <option value="ru">RU</option>
+      <option value="en">EN</option>
+    </select>
+  </header>
+  <main>
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <div>
+        <strong id="statusTitle" data-i18n="statusChecking">Проверяю сервер…</strong>
+        <small id="statusDetail" data-i18n="statusHint">Локальный сервер плагина OpenCode Voice</small>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="port" data-i18n="port">Порт сервера</label>
+      <div class="row">
+        <input id="port" type="number" min="1" max="65535" step="1" value="8765">
+        <button id="test" data-i18n="test">Проверить</button>
+      </div>
+      <div class="hint" data-i18n="portHint">По умолчанию 8765. Если занят, плагин берёт следующий свободный порт — кнопка «Проверить» найдёт его.</div>
+    </div>
+
+    <div class="field">
+      <label for="token" data-i18n="token">Токен (необязательно)</label>
+      <input id="token" type="password" autocomplete="off" placeholder="X-Voice-Token">
+      <div class="hint" data-i18n="tokenHint">Совпадает с server.token в voice.json. Нужен только если сервер слушает не только localhost.</div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="field">
+      <label for="hotkey" data-i18n="hotkey">Push-to-talk на странице</label>
+      <select id="hotkey">
+        <option value="alt+z">Alt+Z</option>
+        <option value="ctrl+shift+z">Ctrl+Shift+Z</option>
+        <option value="alt+q">Alt+Q</option>
+        <option value="f9">F9</option>
+      </select>
+    </div>
+
+    <div class="checks">
+      <label class="check"><input id="sendHotkey" type="checkbox" checked> <span data-i18n="sendHotkey">Alt+X — записать и сразу отправить</span></label>
+      <label class="check"><input id="beeps" type="checkbox" checked> <span data-i18n="beeps">Звуковые сигналы</span></label>
+      <label class="check"><input id="debug" type="checkbox"> <span data-i18n="debug">Лог в консоль (отладка)</span></label>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="footer">
+      <button id="save" class="primary" data-i18n="save">Сохранить</button>
+      <button id="heal" data-i18n="heal">Перезапустить движок</button>
+    </div>
+    <div id="message"></div>
+    <div class="hint" data-i18n="usage">Кнопка 🎤 появляется у поля ввода OpenCode. Запись идёт с микрофона браузера; если браузер не даёт доступ — с микрофона машины через ffmpeg.</div>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
