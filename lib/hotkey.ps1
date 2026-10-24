@@ -23,6 +23,9 @@ public static class VoiceHotkey {
   public static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
 
   [DllImport("user32.dll")]
+  public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+
+  [DllImport("user32.dll")]
   public static extern IntPtr GetForegroundWindow();
 
   [DllImport("user32.dll")]
@@ -43,9 +46,19 @@ public static class VoiceHotkey {
   }
 
   public const uint WM_HOTKEY = 0x0312;
+  public const uint PM_REMOVE = 0x0001;
   public const byte VK_CONTROL = 0x11;
   public const byte VK_V = 0x56;
   public const uint KEYEVENTF_KEYUP = 0x0002;
+
+  public static int DrainHotkeys() {
+    int count = 0;
+    MSG message;
+    while (PeekMessage(out message, IntPtr.Zero, 0, 0, PM_REMOVE)) {
+      if (message.message == WM_HOTKEY) count++;
+    }
+    return count;
+  }
 
   public static void Paste() {
     keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
@@ -88,6 +101,11 @@ try {
     } catch {
       # A failed request must not kill the hotkey listener.
     }
+
+    # While the HTTP request was running, a held or repeatedly pressed key can
+    # queue more WM_HOTKEY messages. Discard them instead of starting a chain of
+    # recordings; the user has to press the combination again.
+    [void][VoiceHotkey]::DrainHotkeys()
   }
 } finally {
   [void][VoiceHotkey]::UnregisterHotKey([IntPtr]::Zero, $id)

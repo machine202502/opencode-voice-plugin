@@ -83,6 +83,12 @@ test("HTTP /hotkey records one phrase and copies it without a session", async ()
     assert.equal(body.text, "привет");
     assert.equal(body.chars, 6);
     assert.deepEqual(copied, ["привет"]);
+
+    // A queued key-repeat must not start another recording immediately.
+    const again = await fetch(`${context.url}/hotkey`, { method: "POST" });
+    const againBody = await again.json();
+    assert.equal(againBody.ok, true);
+    assert.equal(againBody.ignored, true);
   } finally {
     await close(context);
   }
