@@ -202,6 +202,17 @@ export function commandList(ctx, runtime, logger, dependencies = {}) {
   ].map((command) => ({ ...command, id: `${plugin}.${command.name}` }));
 }
 
+/**
+ * Slash commands shown in the desktop/web client. Maintenance commands stay
+ * implemented in commandList() for the terminal TUI and the HTTP API; add a
+ * name here to expose it in desktop again.
+ */
+export const DESKTOP_COMMANDS = ["voice", "voice-send"];
+
+export function desktopCommands(ctx, runtime, logger, dependencies) {
+  return commandList(ctx, runtime, logger, dependencies).filter((command) => DESKTOP_COMMANDS.includes(command.name));
+}
+
 const definition = {
   id: "opencode.voice",
   async setup(ctx) {
@@ -209,16 +220,17 @@ const definition = {
     const logger = createLogger({ name: "voice" });
     const { runtime, dispose } = await startVoiceServer({ directory, logger });
 
-    // V2 command fallback for clients without the TUI plugin (desktop/web UI).
-    // It records and sends the transcript; the TUI plugin appends to the composer.
+    // V2 commands for clients without the TUI plugin (desktop/web UI).
+    // Only the two dictation commands are exposed there; maintenance commands
+    // remain available in the terminal TUI and over HTTP.
     try {
       if (ctx.command?.transform) {
         await ctx.command.transform((editor) => {
-          for (const command of commandList(ctx, runtime, logger)) editor.add(command);
+          for (const command of desktopCommands(ctx, runtime, logger)) editor.add(command);
         });
       }
     } catch (error) {
-      logger.warn("could not register /voice-send command", {
+      logger.warn("could not register desktop voice commands", {
         error: error instanceof Error ? error.message : String(error),
       });
     }

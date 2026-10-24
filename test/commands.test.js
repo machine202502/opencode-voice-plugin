@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { commandList } from "../index.js";
+import { commandList, desktopCommands } from "../index.js";
 import { DEFAULTS, normalizeConfig } from "../lib/config.js";
 
 function fakeContext() {
@@ -47,6 +47,14 @@ test("server commands expose voice, voice-send and maintenance commands", () => 
     assert.equal(typeof command.execute, "function", `${command.name} has no execute`);
     assert.equal(command.id, `opencode.voice.${command.name}`);
   }
+});
+
+test("desktop exposes only /voice and /voice-send", () => {
+  const commands = desktopCommands(fakeContext(), fakeRuntime(), logger);
+  assert.deepEqual(
+    commands.map((command) => command.name),
+    ["voice-send", "voice"],
+  );
 });
 
 test("/voice copies silently and does not trigger the agent", async () => {
