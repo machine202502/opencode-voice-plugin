@@ -26,6 +26,8 @@ function fakeRuntime(transcript = "привет мир") {
     configFiles: ["C:/config/voice.json"],
     provider: "local-onnx",
     doctor: async () => "# diagnostics\n- ffmpeg: ok",
+    warmup: async () => ({ ok: true, label: "fake engine" }),
+    reload: () => undefined,
     status: () => ({ recording: false }),
     startRecording: async () => ({
       done: Promise.resolve({ transcript, reason: "one-shot" }),
@@ -39,7 +41,7 @@ test("server commands expose voice, voice-submit, voice-send and settings", () =
   const commands = commandList(fakeContext(), fakeRuntime(), logger);
   assert.deepEqual(
     commands.map((command) => command.name),
-    ["voice-send", "voice", "voice-submit", "voice-settings", "voice-doctor"],
+    ["voice-send", "voice", "voice-submit", "voice-settings", "voice-doctor", "voice-warmup", "voice-reload"],
   );
   for (const command of commands) {
     assert.equal(typeof command.execute, "function", `${command.name} has no execute`);
@@ -68,4 +70,16 @@ test("/voice-settings and /voice-doctor report through synthetic messages", asyn
   assert.match(settings, /voice\.json/);
   assert.match(settings, /127\.0\.0\.1:8765/);
   assert.equal(ctx.events[1][1].text, "# diagnostics\n- ffmpeg: ok");
+});
+
+test("/voice-warmup and /voice-reload report their result", async () => {
+  const ctx = fakeContext();
+  const commands = commandList(ctx, fakeRuntime(), logger);
+
+  await commands.find((command) => command.name === "voice-warmup").execute({ sessionID: "ses_3" });
+  await commands.find((command) => command.name === "voice-reload").execute({ sessionID: "ses_3" });
+
+  assert.match(ctx.events[0][1].text, /fake engine/);
+  assert.match(ctx.events[1][1].text, /Конфигурация перечитана/);
+  assert.match(ctx.events[1][1].text, /local-onnx/);
 });

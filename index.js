@@ -158,6 +158,41 @@ export function commandList(ctx, runtime, logger) {
         if (!shown) logger.info("voice doctor report", { report });
       },
     },
+    {
+      name: "voice-warmup",
+      description: "Load the configured STT engine now instead of waiting for the first recording",
+      async execute({ sessionID }) {
+        const result = await runtime.warmup();
+        await note(
+          ctx,
+          sessionID,
+          result.ok
+            ? `🔥 Движок прогрет: ${result.label || runtime.providerLabel}`
+            : `⚠️ Не удалось прогреть движок: ${result.error || "unknown error"}`,
+        );
+      },
+    },
+    {
+      name: "voice-reload",
+      description: "Re-read voice.json, restart the STT engine and apply the new settings",
+      async execute({ sessionID }) {
+        runtime.reload();
+        const files = runtime.configFiles?.length ? runtime.configFiles.join("\n") : "(defaults, no voice.json)";
+        await note(
+          ctx,
+          sessionID,
+          [
+            "🔄 Конфигурация перечитана",
+            `Провайдер: ${runtime.config.provider} → ${runtime.provider}`,
+            `Язык: ${runtime.config.language}`,
+            "Файлы:",
+            files,
+            "",
+            "Движок запустится при следующей записи или через /voice-warmup.",
+          ].join("\n"),
+        );
+      },
+    },
   ].map((command) => ({ ...command, id: `${plugin}.${command.name}` }));
 }
 
