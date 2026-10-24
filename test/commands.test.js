@@ -37,11 +37,11 @@ function fakeRuntime(transcript = "привет мир") {
 
 const logger = { info() {}, warn() {}, error() {}, debug() {} };
 
-test("server commands expose voice, voice-submit, voice-send and settings", () => {
+test("server commands expose voice, voice-send and maintenance commands", () => {
   const commands = commandList(fakeContext(), fakeRuntime(), logger);
   assert.deepEqual(
     commands.map((command) => command.name),
-    ["voice-send", "voice", "voice-submit", "voice-settings", "voice-doctor", "voice-warmup", "voice-reload"],
+    ["voice-send", "voice", "voice-settings", "voice-doctor", "voice-warmup", "voice-reload"],
   );
   for (const command of commands) {
     assert.equal(typeof command.execute, "function", `${command.name} has no execute`);
@@ -76,11 +76,11 @@ test("/voice falls back to a session message when copying fails", async () => {
   assert.match(ctx.events[0][1].text, /диктовка/);
 });
 
-test("/voice-submit records and sends the transcript", async () => {
+test("/voice-send records and sends the transcript", async () => {
   const ctx = fakeContext();
   const commands = commandList(ctx, fakeRuntime("тест"), logger);
-  const submit = commands.find((command) => command.name === "voice-submit");
-  await submit.execute({ sessionID: "ses_1" });
+  const send = commands.find((command) => command.name === "voice-send");
+  await send.execute({ sessionID: "ses_1" });
   assert.deepEqual(ctx.events, [["prompt", { sessionID: "ses_1", text: "тест" }]]);
 });
 

@@ -131,11 +131,6 @@ export function commandList(ctx, runtime, logger, dependencies = {}) {
       description: "Record from the microphone, transcribe locally, and copy the text to the clipboard",
     },
     {
-      ...dictate("send"),
-      name: "voice-submit",
-      description: "Record from the microphone and send the transcript immediately (alias of /voice-send)",
-    },
-    {
       name: "voice-settings",
       description: "Show the OpenCode Voice provider, language, microphone, hotkey and config files",
       async execute({ sessionID }) {

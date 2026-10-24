@@ -379,12 +379,12 @@ function createTui(api, options = {}) {
       run: () => toggleVoice(false),
     },
     {
-      name: "voice.submit",
+      name: "voice.send",
       title: t("voice.command.submit"),
       desc: t("voice.command.submit"),
       category: t("voice.category"),
       namespace: "palette",
-      slashName: "voice-submit",
+      slashName: "voice-send",
       run: () => toggleVoice(true),
     },
     {
