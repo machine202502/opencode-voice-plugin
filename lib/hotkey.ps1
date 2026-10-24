@@ -11,7 +11,6 @@ $ErrorActionPreference = "Stop"
 
 Add-Type @"
 using System;
-using System.Text;
 using System.Runtime.InteropServices;
 
 public static class VoiceHotkey {
@@ -30,29 +29,20 @@ public static class VoiceHotkey {
   [DllImport("user32.dll")]
   public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
-  [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-  public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-
-  [DllImport("user32.dll")]
-  public static extern int GetWindowTextLength(IntPtr hWnd);
-
   public static bool IsOpenCode(IntPtr hWnd) {
     if (hWnd == IntPtr.Zero) return false;
 
     uint pid;
     GetWindowThreadProcessId(hWnd, out pid);
     try {
+      // Process name only: the desktop app and its Electron renderers are all
+      // "OpenCode". A window title is not reliable - an editor showing this
+      // project would contain "opencode-voice" and would wrongly match.
       var process = System.Diagnostics.Process.GetProcessById((int)pid);
-      if (string.Equals(process.ProcessName, "OpenCode", StringComparison.OrdinalIgnoreCase)) return true;
+      return string.Equals(process.ProcessName, "OpenCode", StringComparison.OrdinalIgnoreCase);
     } catch {
-      // The process may have exited; fall back to the window title.
+      return false;
     }
-
-    int length = GetWindowTextLength(hWnd);
-    if (length <= 0) return false;
-    var title = new StringBuilder(length + 1);
-    GetWindowText(hWnd, title, title.Capacity);
-    return title.ToString().IndexOf("OpenCode", StringComparison.OrdinalIgnoreCase) >= 0;
   }
 
   [StructLayout(LayoutKind.Sequential)]
