@@ -29,6 +29,12 @@ test("normalizeConfig clamps and fills defaults", () => {
   assert.equal(config.server.concurrency, 8);
 });
 
+test("global hotkey settings are normalized", () => {
+  const config = normalizeConfig({ globalHotkey: " Ctrl+Alt+D ", globalHotkeyPaste: false });
+  assert.equal(config.globalHotkey, "ctrl+alt+d");
+  assert.equal(config.globalHotkeyPaste, false);
+});
+
 test("env overrides win over file values", () => {
   const previous = { ...process.env };
   try {
@@ -37,12 +43,16 @@ test("env overrides win over file values", () => {
     process.env.OPENCODE_VOICE_PORT = "9010";
     process.env.OPENCODE_VOICE_SERVER = "0";
     process.env.OPENCODE_VOICE_TOKEN = "secret";
+    process.env.OPENCODE_VOICE_GLOBAL_HOTKEY = "ctrl+alt+d";
+    process.env.OPENCODE_VOICE_GLOBAL_HOTKEY_PASTE = "0";
     const config = applyEnv(normalizeConfig({ provider: "openai-compatible" }));
     assert.equal(config.provider, "local-onnx");
     assert.equal(config.language, "ru");
     assert.equal(config.server.port, 9010);
     assert.equal(config.server.enabled, false);
     assert.equal(config.server.token, "secret");
+    assert.equal(config.globalHotkey, "ctrl+alt+d");
+    assert.equal(config.globalHotkeyPaste, false);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];
     Object.assign(process.env, previous);

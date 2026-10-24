@@ -12,6 +12,7 @@ import { createLogger } from "./lib/log.js";
 import { VoiceRuntime } from "./lib/runtime.js";
 import { VoiceHttpServer } from "./lib/server/http.js";
 import { copyToClipboard } from "./lib/clipboard.js";
+import { startGlobalHotkey } from "./lib/hotkey.js";
 
 let Plugin;
 try {
@@ -41,6 +42,17 @@ async function startVoiceServer({ directory, logger }) {
     logger.info("voice HTTP server disabled in config");
   }
 
+  let hotkey;
+  if (server && (server.server || server.external) && config.globalHotkey) {
+    hotkey = startGlobalHotkey({
+      hotkey: config.globalHotkey,
+      url: server.url,
+      token: config.server.token,
+      paste: config.globalHotkeyPaste,
+      logger,
+    });
+  }
+
   // Warming up loads a 300 MB ONNX model / whisper model. Do it after the server
   // is responsive, and never block OpenCode startup on it.
   let warmupTimer;
@@ -56,6 +68,7 @@ async function startVoiceServer({ directory, logger }) {
 
   const dispose = async () => {
     if (warmupTimer) clearTimeout(warmupTimer);
+    hotkey?.stop();
     await server?.stop().catch(() => undefined);
     runtime.dispose();
   };

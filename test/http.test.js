@@ -4,12 +4,12 @@ import { VoiceRuntime } from "../lib/runtime.js";
 import { VoiceHttpServer, probeServer } from "../lib/server/http.js";
 import { FakePcmSource, FakeTranscriber, testConfig, testLogger, toneWav } from "./helpers.js";
 
-async function startServer(patch = {}, { transcriber, source } = {}) {
+async function startServer(patch = {}, { transcriber, source, copy } = {}) {
   const runtime = new VoiceRuntime({ config: testConfig(patch), logger: testLogger() });
   runtime.transcriber = transcriber || new FakeTranscriber(["привет"]);
   runtime.defaultTranscriber = runtime.transcriber;
   runtime.defaultSource = source || new FakePcmSource();
-  const server = new VoiceHttpServer({ runtime, logger: runtime.logger, port: 0 });
+  const server = new VoiceHttpServer({ runtime, logger: runtime.logger, port: 0, copy });
   await server.start({ retryPorts: 1 });
   return { runtime, server, url: server.url };
 }
@@ -62,6 +62,27 @@ test("HTTP /transcribe accepts a raw audio body", async () => {
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.text, "привет");
+  } finally {
+    await close(context);
+  }
+});
+
+test("HTTP /hotkey records one phrase and copies it without a session", async () => {
+  const source = new FakePcmSource();
+  const copied = [];
+  const context = await startServer({}, { source, copy: async (text) => (copied.push(text), true) });
+  try {
+    const pending = fetch(`${context.url}/hotkey`, { method: "POST" });
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    source.pushTone(400);
+    source.pushSilence(500);
+    const response = await pending;
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.text, "привет");
+    assert.equal(body.chars, 6);
+    assert.deepEqual(copied, ["привет"]);
   } finally {
     await close(context);
   }
