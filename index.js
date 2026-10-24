@@ -87,15 +87,9 @@ async function note(ctx, sessionID, text) {
   return true;
 }
 
-/** Feedback for `/voice`: never echo the transcript into the chat on success. */
-export function copyMessage(text, copied) {
-  return copied
-    ? `📋 Распознано ${text.length} симв. и скопировано в буфер — вставьте Ctrl+V в поле ввода.`
-    : `⚠️ Не удалось скопировать текст в буфер. Распознано:\n\n${text}`;
-}
-
-export function commandList(ctx, runtime, logger) {
+export function commandList(ctx, runtime, logger, dependencies = {}) {
   const plugin = "opencode.voice";
+  const copy = dependencies.copy ?? copyToClipboard;
 
   const dictate = (mode) => ({
     async execute({ sessionID, delivery }) {
@@ -107,13 +101,21 @@ export function commandList(ctx, runtime, logger) {
         return;
       }
 
-      const copied = await copyToClipboard(text).catch(() => false);
-      // Do not inject the transcript itself into the conversation: `/voice` is
-      // dictation into the prompt, so the text belongs on the clipboard. Only
-      // fall back to showing it when copying failed and it would be lost.
-      const message = copyMessage(text, copied);
-      const shown = await note(ctx, sessionID, message).catch(() => false);
-      if (!shown && !copied) logger.warn("voice transcript was neither shown nor copied", { chars: text.length });
+      const copied = await copy(text).catch(() => false);
+      if (copied) {
+        // `/voice` is dictation into the prompt, not a chat message. Posting a
+        // synthetic note here would make the client treat it as a user turn and
+        // trigger the agent, so success is silent: the beep + clipboard are the
+        // feedback. The text is only shown if it could not be copied, to avoid
+        // losing it.
+        logger.info("voice transcript copied to clipboard", { chars: text.length });
+        return;
+      }
+
+      logger.warn("could not copy voice transcript to the clipboard", { chars: text.length });
+      await note(ctx, sessionID, `⚠️ Не удалось скопировать текст в буфер обмена. Распознано:\n\n${text}`).catch(
+        () => false,
+      );
     },
   });
 

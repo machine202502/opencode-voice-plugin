@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { commandList, copyMessage } from "../index.js";
+import { commandList } from "../index.js";
 import { DEFAULTS, normalizeConfig } from "../lib/config.js";
 
 function fakeContext() {
@@ -49,14 +49,31 @@ test("server commands expose voice, voice-submit, voice-send and settings", () =
   }
 });
 
-test("/voice feedback keeps the transcript out of the chat when copying works", () => {
-  const success = copyMessage("секретный текст", true);
-  assert.match(success, /скопировано в буфер/);
-  assert.doesNotMatch(success, /секретный текст/);
+test("/voice copies silently and does not trigger the agent", async () => {
+  const ctx = fakeContext();
+  const copied = [];
+  const commands = commandList(ctx, fakeRuntime("диктовка"), logger, {
+    copy: async (text) => {
+      copied.push(text);
+      return true;
+    },
+  });
 
-  const failure = copyMessage("секретный текст", false);
-  assert.match(failure, /Не удалось скопировать/);
-  assert.match(failure, /секретный текст/);
+  await commands.find((command) => command.name === "voice").execute({ sessionID: "ses_0" });
+
+  assert.deepEqual(copied, ["диктовка"]);
+  assert.deepEqual(ctx.events, [], "no synthetic message on success");
+});
+
+test("/voice falls back to a session message when copying fails", async () => {
+  const ctx = fakeContext();
+  const commands = commandList(ctx, fakeRuntime("диктовка"), logger, { copy: async () => false });
+
+  await commands.find((command) => command.name === "voice").execute({ sessionID: "ses_0" });
+
+  assert.equal(ctx.events.length, 1);
+  assert.match(ctx.events[0][1].text, /Не удалось скопировать/);
+  assert.match(ctx.events[0][1].text, /диктовка/);
 });
 
 test("/voice-submit records and sends the transcript", async () => {
