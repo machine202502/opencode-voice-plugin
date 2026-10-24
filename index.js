@@ -11,6 +11,7 @@
 import { createLogger } from "./lib/log.js";
 import { VoiceRuntime } from "./lib/runtime.js";
 import { VoiceHttpServer } from "./lib/server/http.js";
+import { copyToClipboard } from "./lib/clipboard.js";
 
 let Plugin;
 try {
@@ -62,22 +63,102 @@ async function startVoiceServer({ directory, logger }) {
   return { runtime, server, dispose };
 }
 
-function voiceCommand(ctx, runtime, logger) {
-  return {
-    name: "voice-send",
-    description:
-      "Record from the microphone, transcribe with the configured local engine, and send the text as the next prompt",
+async function recordTranscript(runtime, logger, command) {
+  if (runtime.status().recording) throw new Error("Voice is already recording");
+  logger.info(`${command} command started`);
+  const session = await runtime.startRecording({ oneShot: true });
+  const info = await session.done;
+  if (info?.cancelled) throw new Error("Voice recording cancelled");
+  if (info?.error) throw new Error(info.error.message || String(info.error));
+  const text = String(info?.transcript || "").trim();
+  if (!text) throw new Error("No speech was recognized");
+  return text;
+}
+
+async function sendTranscript(ctx, sessionID, delivery, text) {
+  if (delivery) await ctx.session.prompt({ sessionID, text, delivery });
+  else await ctx.session.prompt({ sessionID, text });
+}
+
+/** Best-effort note in the session; commands must still work when synthetic messages are unavailable. */
+async function note(ctx, sessionID, text) {
+  if (typeof ctx.session?.synthetic !== "function") return false;
+  await ctx.session.synthetic({ sessionID, text });
+  return true;
+}
+
+export function commandList(ctx, runtime, logger) {
+  const plugin = "opencode.voice";
+
+  const dictate = (mode) => ({
     async execute({ sessionID, delivery }) {
-      if (runtime.status().recording) throw new Error("Voice is already recording");
-      logger.info("voice-send command started", { sessionID });
-      const session = await runtime.startRecording({ oneShot: true });
-      const info = await session.done;
-      if (info?.cancelled) throw new Error("Voice recording cancelled");
-      if (!info?.transcript) throw new Error(info?.error?.message || "No speech was recognized");
-      await ctx.session.prompt(delivery ? { sessionID, text: info.transcript, delivery } : { sessionID, text: info.transcript });
-      logger.info("voice-send command sent transcript", { chars: info.transcript.length });
+      const text = await recordTranscript(runtime, logger, mode === "send" ? "voice-send" : "voice");
+      logger.info("voice transcript ready", { chars: text.length, mode });
+
+      if (mode === "send") {
+        await sendTranscript(ctx, sessionID, delivery, text);
+        return;
+      }
+
+      const copied = await copyToClipboard(text).catch(() => false);
+      const shown = await note(ctx, sessionID, copied ? `${text}\n\n📋 Скопировано в буфер — вставьте Ctrl+V.` : text).catch(
+        () => false,
+      );
+      if (!shown && !copied) logger.warn("voice transcript was neither shown nor copied", { chars: text.length });
     },
-  };
+  });
+
+  return [
+    {
+      ...dictate("send"),
+      name: "voice-send",
+      description: "Record from the microphone, transcribe locally, and send the text as the next prompt",
+    },
+    {
+      ...dictate("copy"),
+      name: "voice",
+      description: "Record from the microphone, transcribe locally, and copy the text to the clipboard",
+    },
+    {
+      ...dictate("send"),
+      name: "voice-submit",
+      description: "Record from the microphone and send the transcript immediately (alias of /voice-send)",
+    },
+    {
+      name: "voice-settings",
+      description: "Show the OpenCode Voice provider, language, microphone, hotkey and config files",
+      async execute({ sessionID }) {
+        const config = runtime.config;
+        const files = runtime.configFiles?.length ? runtime.configFiles.join("\n") : "(defaults, no voice.json)";
+        await note(
+          ctx,
+          sessionID,
+          [
+            "🎤 OpenCode Voice",
+            `Провайдер: ${config.provider} → ${runtime.provider}`,
+            `Язык: ${config.language}`,
+            `Микрофон: ${config.audio.device || "автоматически (первый вход)"}`,
+            `Клавиша: ${config.hotkey}`,
+            `HTTP-сервер: http://${config.server.host}:${config.server.port}`,
+            "",
+            "Конфигурация:",
+            files,
+            "",
+            "Изменения применяются через /voice-reload или POST /reload.",
+          ].join("\n"),
+        );
+      },
+    },
+    {
+      name: "voice-doctor",
+      description: "Show OpenCode Voice diagnostics: ffmpeg, microphones, model, engine and server",
+      async execute({ sessionID }) {
+        const report = await runtime.doctor();
+        const shown = await note(ctx, sessionID, report);
+        if (!shown) logger.info("voice doctor report", { report });
+      },
+    },
+  ].map((command) => ({ ...command, id: `${plugin}.${command.name}` }));
 }
 
 const definition = {
@@ -92,7 +173,7 @@ const definition = {
     try {
       if (ctx.command?.transform) {
         await ctx.command.transform((editor) => {
-          editor.add(voiceCommand(ctx, runtime, logger));
+          for (const command of commandList(ctx, runtime, logger)) editor.add(command);
         });
       }
     } catch (error) {
